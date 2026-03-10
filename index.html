@@ -715,31 +715,39 @@
       localStorage.setItem('tzs_purchases_simplified', JSON.stringify(purchases));
     }
 
-    async function sendToGoogleSheets(purchase) {
-      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwbtE49GGDoBB0dWlg2F9c6nECOeIOaOZ033ogDAC7M0Jj8ip-4imJMM_Fl-v_JDAp3eg/exec') {
-        return { skipped: true };
-      }
+  async function sendToGoogleSheets(purchase) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwL12KoKAzHWjywedO3-SU6rjwDUhFPBooaPAP9gjUakebGTJ1O5QIU8sHJKvi63UukQA/exec') {
+    throw new Error('Apps Script URL not set');
+  }
 
-      const response = await fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
-        },
-        body: JSON.stringify(purchase)
-      });
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(purchase)
+  });
 
-      const result = await response.json();
+  const text = await response.text();
+  console.log('Raw Apps Script response:', text);
 
-      if (!response.ok) {
-        throw new Error(`Google Sheets request failed: ${response.status}`);
-      }
+  let result;
+  try {
+    result = JSON.parse(text);
+  } catch (err) {
+    throw new Error('Response was not valid JSON: ' + text);
+  }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to save to Google Sheets');
-      }
+  if (!response.ok) {
+    throw new Error(`Google Sheets request failed: ${response.status}`);
+  }
 
-      return result;
-    }
+  if (!result.success) {
+    throw new Error(result.error || 'Failed to save to Google Sheets');
+  }
+
+  return result;
+}
 
     document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
