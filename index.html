@@ -715,8 +715,8 @@
       localStorage.setItem('tzs_purchases_simplified', JSON.stringify(purchases));
     }
 
-  async function sendToGoogleSheets(purchase) {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwL12KoKAzHWjywedO3-SU6rjwDUhFPBooaPAP9gjUakebGTJ1O5QIU8sHJKvi63UukQA/exec') {
+ async function sendToGoogleSheets(purchase) {
+  if (!APPS_SCRIPT_URL) {
     throw new Error('Apps Script URL not set');
   }
 
@@ -748,7 +748,6 @@
 
   return result;
 }
-
     document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
