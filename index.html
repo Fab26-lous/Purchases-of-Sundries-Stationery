@@ -635,7 +635,6 @@
   </div>
 
   <script>
-    // Put your deployed Google Apps Script web app URL here
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwL12KoKAzHWjywedO3-SU6rjwDUhFPBooaPAP9gjUakebGTJ1O5QIU8sHJKvi63UukQA/exec';
 
     let purchases = [];
@@ -715,108 +714,104 @@
       localStorage.setItem('tzs_purchases_simplified', JSON.stringify(purchases));
     }
 
- async function sendToGoogleSheets(purchase) {
-  if (!APPS_SCRIPT_URL) {
-    throw new Error('Apps Script URL not set');
-  }
+    async function sendToGoogleSheets(purchase) {
+      if (!APPS_SCRIPT_URL) {
+        throw new Error('Apps Script URL not set');
+      }
 
-  const response = await fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(purchase)
-  });
-
-  const text = await response.text();
-  console.log('Raw Apps Script response:', text);
-
-  let result;
-  try {
-    result = JSON.parse(text);
-  } catch (err) {
-    throw new Error('Response was not valid JSON: ' + text);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Google Sheets request failed: ${response.status}`);
-  }
-
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to save to Google Sheets');
-  }
-
-  return result;
-}
-    document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const submitBtn = document.getElementById('submitBtn');
-
-  if (!categoryInput.value) {
-    showAlert('Please select a category (Sundries or Stationery)', 'error');
-    return;
-  }
-
-  const amount = parseTZSInput(document.getElementById('amount').value);
-  if (amount <= 0) {
-    showAlert('Please enter a valid amount greater than 0', 'error');
-    return;
-  }
-
-  const purchase = {
-    id: Date.now(),
-    date: document.getElementById('date').value,
-    item: document.getElementById('item').value.trim() || 'Unspecified',
-    category: categoryInput.value,
-    amount,
-    notes: document.getElementById('notes').value.trim(),
-    timestamp: new Date().toISOString()
-  };
-
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-
-  try {
-    // Save locally first
-    purchases.push(purchase);
-    savePurchases();
-
-    // Update UI immediately
-    document.getElementById('purchaseForm').reset();
-    document.getElementById('date').value = today;
-    document.getElementById('amount').value = '0';
-    categoryOptions.forEach(o => o.classList.remove('selected'));
-    categoryInput.value = '';
-
-    updateDashboard();
-    updateRecentEntries();
-    loadDailyReport();
-
-    // Re-enable button immediately
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
-
-    // Show success immediately
-    showAlert('Purchase saved successfully!', 'success');
-
-    // Send to Google Sheets without blocking the user
-    sendToGoogleSheets(purchase)
-      .then(() => {
-        console.log('Synced to Google Sheets');
-      })
-      .catch((sheetError) => {
-        console.error('Google Sheets sync error:', sheetError);
-        showAlert(`Saved locally, but Google Sheets sync failed: ${sheetError.message}`, 'error');
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(purchase)
       });
 
-  } catch (error) {
-    console.error(error);
-    showAlert('An error occurred while saving purchase.', 'error');
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
-  }
-});
+      const text = await response.text();
+      console.log('Raw Apps Script response:', text);
+
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (err) {
+        throw new Error('Response was not valid JSON: ' + text);
+      }
+
+      if (!response.ok) {
+        throw new Error(`Google Sheets request failed: ${response.status}`);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save to Google Sheets');
+      }
+
+      return result;
+    }
+
+    document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (!categoryInput.value) {
+        showAlert('Please select a category (Sundries or Stationery)', 'error');
+        return;
+      }
+
+      const amount = parseTZSInput(document.getElementById('amount').value);
+      if (amount <= 0) {
+        showAlert('Please enter a valid amount greater than 0', 'error');
+        return;
+      }
+
+      const purchase = {
+        id: Date.now(),
+        date: document.getElementById('date').value,
+        item: document.getElementById('item').value.trim() || 'Unspecified',
+        category: categoryInput.value,
+        amount,
+        notes: document.getElementById('notes').value.trim(),
+        timestamp: new Date().toISOString()
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+      try {
+        purchases.push(purchase);
+        savePurchases();
+
+        document.getElementById('purchaseForm').reset();
+        document.getElementById('date').value = today;
+        document.getElementById('amount').value = '0';
+        categoryOptions.forEach(o => o.classList.remove('selected'));
+        categoryInput.value = '';
+
+        updateDashboard();
+        updateRecentEntries();
+        loadDailyReport();
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
+
+        showAlert('Purchase saved successfully!', 'success');
+
+        sendToGoogleSheets(purchase)
+          .then(() => {
+            console.log('Synced to Google Sheets');
+          })
+          .catch((sheetError) => {
+            console.error('Google Sheets sync error:', sheetError);
+            showAlert(`Saved locally, but Google Sheets sync failed: ${sheetError.message}`, 'error');
+          });
+
+      } catch (error) {
+        console.error(error);
+        showAlert('An error occurred while saving purchase.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
+      }
+    });
 
     function showAlert(message, type) {
       const alert = document.getElementById('alert');
