@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Logger</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .form-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .amount-input {
+            position: relative;
+        }
+        
+        .amount-input::before {
+            content: '$';
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            color: #666;
+        }
+        
+        .amount-input input {
+            padding-left: 25px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .category-btn {
+            padding: 10px;
+            background: #f0f0f0;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .category-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #764ba2;
+        }
+        
+        .category-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        .category-btn.selected:hover {
+            background: #764ba2;
+        }
+        
+        .recent-entries {
+            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .recent-entries h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .entries-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .entry-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .entry-item:last-child {
+            border-bottom: none;
+        }
+        
+        .entry-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .entry-amount {
+            font-weight: 600;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Purchase Logger</h1>
+            <p>Track your expenses easily</p>
+        </div>
+        
+        <div class="form-card">
+            <div id="alert" class="alert"></div>
+            
+            <form id="purchaseForm">
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="item">Item Description</label>
+                    <input type="text" id="item" name="item" placeholder="e.g., Groceries, Coffee, etc." required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="hidden" id="category" name="category" required>
+                    <div class="categories">
+                        <div class="category-btn" data-category="Sundries">Sundries</div>
+                        <div class="category-btn" data-category="Stationery">Stationery</div>
+
+                        <div class="category-btn" data-category="Other">📦 Other</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="amount">Amount ($)</label>
+                    <div class="amount-input">
+                        <input type="number" id="amount" name="amount" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="notes">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" rows="3" placeholder="Add any additional details..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn" id="submitBtn">Log Purchase</button>
+            </form>
+        </div>
+        
+        <div class="recent-entries">
+            <h3>Recent Entries</h3>
+            <div class="entries-list" id="recentEntries">
+                <!-- Recent entries will be displayed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Replace with your Google Apps Script Web App URL
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwbtE49GGDoBB0dWlg2F9c6nECOeIOaOZ033ogDAC7M0Jj8ip-4imJMM_Fl-v_JDAp3eg/exec';
+        
+        // Set today's date as default
+        document.getElementById('date').valueAsDate = new Date();
+        
+        // Category selection
+        const categoryInput = document.getElementById('category');
+        const categoryBtns = document.querySelectorAll('.category-btn');
+        
+        categoryBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                categoryBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                categoryInput.value = btn.dataset.category;
+            });
+        });
+        
+        // Form submission
+        document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const alert = document.getElementById('alert');
+            
+            // Validate category
+            if (!categoryInput.value) {
+                showAlert('Please select a category', 'error');
+                return;
+            }
+            
+            // Prepare data
+            const formData = {
+                date: document.getElementById('date').value,
+                item: document.getElementById('item').value,
+                category: categoryInput.value,
+                amount: parseFloat(document.getElementById('amount').value),
+                notes: document.getElementById('notes').value
+            };
+            
+            // Disable button during submission
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Important for Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                // Since we're using no-cors, we can't read the response
+                // Assume it worked and show success message
+                showAlert('Purchase logged successfully!', 'success');
+                
+                // Reset form (keep date as today)
+                document.getElementById('item').value = '';
+                categoryBtns.forEach(b => b.classList.remove('selected'));
+                categoryInput.value = '';
+                document.getElementById('amount').value = '';
+                document.getElementById('notes').value = '';
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Add to recent entries
+                addToRecentEntries(formData);
+                
+            } catch (error) {
+                showAlert('Error logging purchase. Please try again.', 'error');
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log Purchase';
+            }
+        });
+        
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert alert-${type}`;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        function addToRecentEntries(entry) {
+            const entriesList = document.getElementById('recentEntries');
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'entry-item';
+            
+            const date = new Date(entry.date).toLocaleDateString();
+            
+            entryDiv.innerHTML = `
+                <span>
+                    <strong>${entry.item}</strong>
+                    <span class="entry-date"> (${date})</span>
+                </span>
+                <span class="entry-amount">$${entry.amount.toFixed(2)}</span>
+            `;
+            
+            entriesList.insertBefore(entryDiv, entriesList.firstChild);
+            
+            // Keep only last 5 entries
+            while (entriesList.children.length > 5) {
+                entriesList.removeChild(entriesList.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>
