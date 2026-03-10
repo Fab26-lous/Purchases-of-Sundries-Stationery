@@ -749,68 +749,74 @@
   return result;
 }
     document.getElementById('purchaseForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+  e.preventDefault();
 
-      const submitBtn = document.getElementById('submitBtn');
+  const submitBtn = document.getElementById('submitBtn');
 
-      if (!categoryInput.value) {
-        showAlert('Please select a category (Sundries or Stationery)', 'error');
-        return;
-      }
+  if (!categoryInput.value) {
+    showAlert('Please select a category (Sundries or Stationery)', 'error');
+    return;
+  }
 
-      const amount = parseTZSInput(document.getElementById('amount').value);
-      if (amount <= 0) {
-        showAlert('Please enter a valid amount greater than 0', 'error');
-        return;
-      }
+  const amount = parseTZSInput(document.getElementById('amount').value);
+  if (amount <= 0) {
+    showAlert('Please enter a valid amount greater than 0', 'error');
+    return;
+  }
 
-      const purchase = {
-        id: Date.now(),
-        date: document.getElementById('date').value,
-        item: document.getElementById('item').value.trim() || 'Unspecified',
-        category: categoryInput.value,
-        amount,
-        notes: document.getElementById('notes').value.trim(),
-        timestamp: new Date().toISOString()
-      };
+  const purchase = {
+    id: Date.now(),
+    date: document.getElementById('date').value,
+    item: document.getElementById('item').value.trim() || 'Unspecified',
+    category: categoryInput.value,
+    amount,
+    notes: document.getElementById('notes').value.trim(),
+    timestamp: new Date().toISOString()
+  };
 
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-      try {
-        purchases.push(purchase);
-        savePurchases();
+  try {
+    // Save locally first
+    purchases.push(purchase);
+    savePurchases();
 
-        try {
-          const sheetResult = await sendToGoogleSheets(purchase);
+    // Update UI immediately
+    document.getElementById('purchaseForm').reset();
+    document.getElementById('date').value = today;
+    document.getElementById('amount').value = '0';
+    categoryOptions.forEach(o => o.classList.remove('selected'));
+    categoryInput.value = '';
 
-          if (sheetResult.skipped) {
-            showAlert('Purchase saved locally. Add your Apps Script URL to enable Google Sheets sync.', 'success');
-          } else {
-            showAlert('Purchase recorded successfully!', 'success');
-          }
-        } catch (sheetError) {
-          console.error('Google Sheets sync error:', sheetError);
-          showAlert(`Saved locally, but Google Sheets sync failed: ${sheetError.message}`, 'error');
-        }
+    updateDashboard();
+    updateRecentEntries();
+    loadDailyReport();
 
-        document.getElementById('purchaseForm').reset();
-        document.getElementById('date').value = today;
-        document.getElementById('amount').value = '0';
-        categoryOptions.forEach(o => o.classList.remove('selected'));
-        categoryInput.value = '';
+    // Re-enable button immediately
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
 
-        updateDashboard();
-        updateRecentEntries();
-        loadDailyReport();
-      } catch (error) {
-        console.error(error);
-        showAlert('An error occurred while saving purchase.', 'error');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
-      }
-    });
+    // Show success immediately
+    showAlert('Purchase saved successfully!', 'success');
+
+    // Send to Google Sheets without blocking the user
+    sendToGoogleSheets(purchase)
+      .then(() => {
+        console.log('Synced to Google Sheets');
+      })
+      .catch((sheetError) => {
+        console.error('Google Sheets sync error:', sheetError);
+        showAlert(`Saved locally, but Google Sheets sync failed: ${sheetError.message}`, 'error');
+      });
+
+  } catch (error) {
+    console.error(error);
+    showAlert('An error occurred while saving purchase.', 'error');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Purchase';
+  }
+});
 
     function showAlert(message, type) {
       const alert = document.getElementById('alert');
