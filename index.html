@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TZS Purchase Logger - Sundries & Stationery</title>
+  <title>TZS Purchases - Sundries & Stationery</title>
   
   <style>
     * {
@@ -70,7 +70,7 @@
 
     .grid-container {
       display: grid;
-      grid-template-columns: 400px 1fr;
+      grid-template-columns: 450px 1fr;
       gap: 24px;
       margin-bottom: 24px;
     }
@@ -110,6 +110,13 @@
 
     .card-header .icon {
       font-size: 1.6em;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 22px;
     }
 
     .form-group {
@@ -171,6 +178,45 @@
       font-weight: 500;
       letter-spacing: 0.5px;
       font-size: 16px;
+    }
+
+    .quantity-input {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .quantity-input input {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .total-display {
+      background: linear-gradient(135deg, #f0f7ff, #e6f0fa);
+      padding: 16px 20px;
+      border-radius: 14px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 2px solid #1e4a6f;
+    }
+
+    .total-label {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 1.1em;
+    }
+
+    .total-label i {
+      color: #1e4a6f;
+      margin-right: 10px;
+    }
+
+    .total-amount {
+      font-size: 1.8em;
+      font-weight: 700;
+      color: #1e4a6f;
     }
 
     .category-toggle {
@@ -374,7 +420,7 @@
     }
 
     .entries-list {
-      max-height: 280px;
+      max-height: 320px;
       overflow-y: auto;
       margin-top: 16px;
       scrollbar-width: thin;
@@ -417,6 +463,15 @@
       margin-bottom: 4px;
     }
 
+    .entry-details {
+      font-size: 0.85em;
+      color: #64748b;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
     .entry-meta {
       display: flex;
       gap: 12px;
@@ -446,6 +501,13 @@
       font-weight: 700;
       color: #1e4a6f;
       white-space: nowrap;
+    }
+
+    .entry-quantity {
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
     }
 
     .entry-actions {
@@ -514,6 +576,7 @@
       display: flex;
       gap: 8px;
       margin-top: 10px;
+      flex-wrap: wrap;
     }
 
     .quick-filter {
@@ -539,6 +602,7 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
+      font-size: 0.95em;
     }
 
     .report-table th {
@@ -572,6 +636,16 @@
       font-weight: 600;
       color: #1e4a6f;
       text-align: right;
+    }
+
+    .quantity-cell {
+      text-align: center;
+      color: #64748b;
+    }
+
+    .price-cell {
+      text-align: right;
+      color: #64748b;
     }
 
     .sundries-row {
@@ -781,6 +855,7 @@
       justify-content: center;
       gap: 8px;
       margin-top: 20px;
+      flex-wrap: wrap;
     }
 
     .pagination button {
@@ -886,12 +961,26 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="amount"><i class="fas fa-coins"></i> Amount (TZS) <span class="keyboard-shortcut">⌘A</span></label>
-            <div class="currency-input">
-              <span class="currency-symbol">TZS</span>
-              <input type="text" id="amount" name="amount" placeholder="0" required />
+          <div class="form-row">
+            <div class="form-group">
+              <label for="quantity"><i class="fas fa-hashtag"></i> Quantity <span class="keyboard-shortcut">⌘Q</span></label>
+              <div class="quantity-input">
+                <input type="text" id="quantity" name="quantity" placeholder="1" value="1" />
+              </div>
             </div>
+
+            <div class="form-group">
+              <label for="price"><i class="fas fa-tag"></i> Unit Price (TZS) <span class="keyboard-shortcut">⌘P</span></label>
+              <div class="currency-input">
+                <span class="currency-symbol">TZS</span>
+                <input type="text" id="price" name="price" placeholder="0" />
+              </div>
+            </div>
+          </div>
+
+          <div class="total-display" id="totalDisplay">
+            <span class="total-label"><i class="fas fa-calculator"></i> Total Amount:</span>
+            <span class="total-amount" id="totalAmount">TZS 0</span>
           </div>
 
           <div class="form-group">
@@ -972,7 +1061,7 @@
       <div class="report-header">
         <div>
           <h2 style="color: #1e293b;">📋 Daily Report</h2>
-          <p style="color: #64748b;">Sundries & Stationery breakdown</p>
+          <p style="color: #64748b;">Sundries & Stationery breakdown with quantities</p>
         </div>
         <div class="date-controls no-print">
           <input type="date" id="reportDate" value="" />
@@ -1070,6 +1159,42 @@
       input.value = value ? Number(value).toLocaleString('en-US') : '';
     }
 
+    function calculateTotal() {
+      const quantity = parseFloat(document.getElementById('quantity').value.replace(/[^\d.]/g, '')) || 1;
+      const price = parseTZSInput(document.getElementById('price').value);
+      const total = quantity * price;
+      document.getElementById('totalAmount').textContent = formatTZS(total);
+      return total;
+    }
+
+    // Quantity input handler
+    const quantityInput = document.getElementById('quantity');
+    quantityInput.addEventListener('input', function() {
+      formatAmountInput(this);
+      calculateTotal();
+    });
+
+    // Price input handler
+    const priceInput = document.getElementById('price');
+    priceInput.addEventListener('input', function() {
+      formatAmountInput(this);
+      calculateTotal();
+    });
+
+    priceInput.addEventListener('blur', function() {
+      if (this.value === '' || this.value === '0') {
+        this.value = '0';
+      }
+      calculateTotal();
+    });
+
+    quantityInput.addEventListener('blur', function() {
+      if (this.value === '' || this.value === '0') {
+        this.value = '1';
+      }
+      calculateTotal();
+    });
+
     function escapeHTML(str) {
       return String(str)
         .replace(/&/g, '&amp;')
@@ -1096,17 +1221,6 @@
       }
     }
 
-    const amountInput = document.getElementById('amount');
-    amountInput.addEventListener('input', function () {
-      formatAmountInput(this);
-    });
-
-    amountInput.addEventListener('blur', function () {
-      if (this.value === '' || this.value === '0') {
-        this.value = '0';
-      }
-    });
-
     const categoryInput = document.getElementById('category');
     const categoryOptions = document.querySelectorAll('.category-option');
 
@@ -1120,7 +1234,7 @@
 
     function loadPurchases() {
       try {
-        const saved = localStorage.getItem('tzs_purchases_enhanced');
+        const saved = localStorage.getItem('tzs_purchases_enhanced_v2');
         purchases = saved ? JSON.parse(saved) : [];
         
         // Load sync queue
@@ -1139,7 +1253,7 @@
     }
 
     function savePurchases() {
-      localStorage.setItem('tzs_purchases_enhanced', JSON.stringify(purchases));
+      localStorage.setItem('tzs_purchases_enhanced_v2', JSON.stringify(purchases));
       updateTodayCount();
     }
 
@@ -1233,7 +1347,10 @@
         return;
       }
 
-      const amount = parseTZSInput(document.getElementById('amount').value);
+      const quantity = parseFloat(document.getElementById('quantity').value.replace(/[^\d.]/g, '')) || 1;
+      const price = parseTZSInput(document.getElementById('price').value);
+      const amount = quantity * price;
+
       if (amount <= 0) {
         showAlert('Please enter a valid amount greater than 0', 'error');
         return;
@@ -1244,6 +1361,8 @@
         date: document.getElementById('date').value,
         item: document.getElementById('item').value.trim() || 'Unspecified',
         category: categoryInput.value,
+        quantity: quantity,
+        price: price,
         amount,
         notes: document.getElementById('notes').value.trim(),
         timestamp: new Date().toISOString()
@@ -1259,7 +1378,9 @@
         // Clear form
         document.getElementById('purchaseForm').reset();
         document.getElementById('date').value = today;
-        document.getElementById('amount').value = '0';
+        document.getElementById('quantity').value = '1';
+        document.getElementById('price').value = '0';
+        document.getElementById('totalAmount').textContent = 'TZS 0';
         categoryOptions.forEach(o => o.classList.remove('selected'));
         categoryInput.value = '';
 
@@ -1325,8 +1446,11 @@
 
       document.getElementById('date').value = purchase.date;
       document.getElementById('item').value = purchase.item;
-      document.getElementById('amount').value = purchase.amount.toLocaleString('en-US');
+      document.getElementById('quantity').value = purchase.quantity || 1;
+      document.getElementById('price').value = (purchase.price || purchase.amount).toLocaleString('en-US');
       document.getElementById('notes').value = purchase.notes || '';
+      
+      calculateTotal();
 
       // Set category
       categoryOptions.forEach(o => {
@@ -1453,6 +1577,8 @@
         entryDiv.className = 'entry-item';
 
         const categoryClass = purchase.category === 'Sundries' ? 'sundries' : 'stationery';
+        const quantity = purchase.quantity || 1;
+        const unitPrice = purchase.price || purchase.amount;
 
         entryDiv.innerHTML = `
           <div class="entry-info">
@@ -1460,6 +1586,9 @@
             <div class="entry-meta">
               <span>${escapeHTML(purchase.date)}</span>
               <span class="entry-category ${categoryClass}">${escapeHTML(purchase.category)}</span>
+            </div>
+            <div class="entry-details">
+              <span class="entry-quantity"><i class="fas fa-hashtag"></i> ${quantity} × ${formatTZS(unitPrice)}</span>
             </div>
           </div>
           <div class="entry-amount">${formatTZS(purchase.amount)}</div>
@@ -1554,6 +1683,7 @@
       }
 
       const total = data.reduce((sum, p) => sum + p.amount, 0);
+      const totalQuantity = data.reduce((sum, p) => sum + (p.quantity || 1), 0);
       const sundriesTotal = data.filter(p => p.category === 'Sundries').reduce((sum, p) => sum + p.amount, 0);
       const stationeryTotal = data.filter(p => p.category === 'Stationery').reduce((sum, p) => sum + p.amount, 0);
 
@@ -1567,7 +1697,7 @@
           <h3 style="color: #1e293b; margin-bottom: 8px;">
             Report Summary
           </h3>
-          <p style="color: #64748b;">${data.length} total purchases • Total ${formatTZS(total)}</p>
+          <p style="color: #64748b;">${data.length} purchases • ${totalQuantity} total items • Total ${formatTZS(total)}</p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
@@ -1597,7 +1727,9 @@
               <th>Time</th>
               <th>Description</th>
               <th>Category</th>
-              <th style="text-align: right;">Amount (TZS)</th>
+              <th class="quantity-cell">Qty</th>
+              <th class="price-cell">Unit Price</th>
+              <th style="text-align: right;">Total (TZS)</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -1614,6 +1746,8 @@
           : '-';
 
         const rowClass = p.category === 'Sundries' ? 'sundries-row' : 'stationery-row';
+        const quantity = p.quantity || 1;
+        const unitPrice = p.price || p.amount;
 
         reportHTML += `
           <tr class="${rowClass}">
@@ -1621,6 +1755,8 @@
             <td>${escapeHTML(time)}</td>
             <td><strong>${escapeHTML(p.item)}</strong></td>
             <td>${escapeHTML(p.category)}</td>
+            <td class="quantity-cell">${quantity}</td>
+            <td class="price-cell">${formatTZS(unitPrice)}</td>
             <td class="amount-cell">${formatTZS(p.amount)}</td>
             <td>${escapeHTML(p.notes || '-')}</td>
           </tr>
@@ -1631,7 +1767,7 @@
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="4" style="text-align: right;"><strong>Total:</strong></td>
+              <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
               <td class="amount-cell"><strong>${formatTZS(total)}</strong></td>
               <td></td>
             </tr>
@@ -1672,7 +1808,9 @@
         Time: p.timestamp ? new Date(p.timestamp).toLocaleTimeString() : '',
         Item: p.item,
         Category: p.category,
-        Amount: p.amount,
+        Quantity: p.quantity || 1,
+        'Unit Price': p.price || p.amount,
+        'Total Amount': p.amount,
         Notes: p.notes || ''
       }));
 
@@ -1795,9 +1933,13 @@
             e.preventDefault();
             document.querySelector('.category-option').focus();
             break;
-          case 'a':
+          case 'q':
             e.preventDefault();
-            document.getElementById('amount').focus();
+            document.getElementById('quantity').focus();
+            break;
+          case 'p':
+            e.preventDefault();
+            document.getElementById('price').focus();
             break;
           case 's':
             e.preventDefault();
@@ -1818,21 +1960,23 @@
       draftTimeout = setTimeout(() => {
         const draft = {
           item: document.getElementById('item').value,
-          amount: document.getElementById('amount').value,
+          quantity: document.getElementById('quantity').value,
+          price: document.getElementById('price').value,
           notes: document.getElementById('notes').value,
           category: categoryInput.value
         };
-        localStorage.setItem('tzs_draft', JSON.stringify(draft));
+        localStorage.setItem('tzs_draft_v2', JSON.stringify(draft));
       }, 1000);
     });
 
     // Load draft
-    const draft = localStorage.getItem('tzs_draft');
+    const draft = localStorage.getItem('tzs_draft_v2');
     if (draft) {
       try {
         const draftData = JSON.parse(draft);
         if (draftData.item) document.getElementById('item').value = draftData.item;
-        if (draftData.amount) document.getElementById('amount').value = draftData.amount;
+        if (draftData.quantity) document.getElementById('quantity').value = draftData.quantity;
+        if (draftData.price) document.getElementById('price').value = draftData.price;
         if (draftData.notes) document.getElementById('notes').value = draftData.notes;
         if (draftData.category) {
           categoryOptions.forEach(o => {
@@ -1842,6 +1986,7 @@
           });
           categoryInput.value = draftData.category;
         }
+        calculateTotal();
       } catch (e) {}
     }
   </script>
